@@ -1,0 +1,4 @@
+board,test,mean_us,max_us,min_us,mean_cycles,MB_per_s
+stm32h757i_eval,mpu_reprogram,0.076,0.105,0.072,30,
+stm32h757i_eval,dcache_clean_invalidate,80.685,80.717,71.727,32274,
+stm32h757i_eval,dma_copy_fast_to_ext,333.582,333.640,333.455,133432,392.922
