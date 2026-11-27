@@ -9,15 +9,14 @@
 2. [Research questions](#2-research-questions)
 3. [What the framework does](#3-what-the-framework-does)
 4. [How it works, step by step](#4-how-it-works-step-by-step)
-5. [Repository layout](#5-repository-layout)
-6. [Boards](#6-boards)
-7. [Experiments](#7-experiments)
-8. [Results so far](#8-results-so-far)
-9. [Methodology and measurement rules](#9-methodology-and-measurement-rules)
-10. [Getting started](#10-getting-started)
-11. [Adding a board, model or experiment](#11-adding-a-board-model-or-experiment)
-12. [Limitations](#12-limitations)
-13. [Roadmap](#13-roadmap)
+5. [Boards](#6-boards)
+6. [Experiments](#7-experiments)
+7. [Results so far](#8-results-so-far)
+8. [Methodology and measurement rules](#9-methodology-and-measurement-rules)
+9. [Getting started](#10-getting-started)
+10. [Adding a board, model or experiment](#11-adding-a-board-model-or-experiment)
+11. [Limitations](#12-limitations)
+12. [Roadmap](#13-roadmap)
 
 ---
 
@@ -84,39 +83,7 @@ What happens on the board when a placement-sweep binary starts:
 5. Warm-up runs, then N timed runs; each run's cycle count is stored.
 6. All cycle counts, min/mean/max and the output checksum are printed, followed by one CSV line.
 
-## 5. Repository layout
-
-Shared, board-independent code sits at the top. **Everything for one board — its port, placements, experiments and results — lives inside that board's folder.**
-
-```
-mcu-memory-hierarchy-bench/
-│
-├── README.md                      this file
-├── core/                          portable C, no board code
-│   ├── include/                   port.h (board contract), port_overheads.h, bench.h
-│   ├── engine/                    int8 inference engine, bit-exact with TFLite
-│   └── bench/                     studies: placement_sweep.c, overhead_bench.c, common.c
-├── models/                        generated once, shared by all boards
-│   ├── mobilenetv2_a035_224_fft_int8/
-│   └── miniresnetv2_s2_64x50_tl_int8/
-├── tools/                         tflite2c.py, placement.py, make_placement.py
-├── docs/                          ARCHITECTURE.md, PORTING.md, STUDIES.md, ROADMAP.md
-│
-├── stm32h757i_eval/               ◄── one parent folder per board
-│   ├── README.md                  clocks, memory map, MPU, compiler flags
-│   ├── RESULTS.md                 all results for this board in one page
-│   ├── port/                      board code + Makefile + startup + linker + CMSIS
-│   ├── placements/<model>/s<KB>/  placement tables for this board's budgets
-│   └── experiments/
-│       ├── 01_placement_sweep_cached/      Makefile, README.md, results/
-│       ├── 02_placement_sweep_noncached/   Makefile, README.md, results/
-│       └── 03_overhead_bench/              Makefile, README.md, results/
-│
-├── host/                          PC build for correctness checks (no timing claims)
-└── _template_board/               copy this to start a new board
-```
-
-## 6. Boards
+## 5. Boards
 
 | Board folder | Core | Fast memory | External tier | Status |
 |---|---|---|---|---|
@@ -124,7 +91,7 @@ mcu-memory-hierarchy-bench/
 | [`host/`](host/) | PC | — | emulated | correctness checks |
 | [`_template_board/`](_template_board/) | — | — | — | starting point |
 
-## 7. Experiments
+## 6. Experiments
 
 Experiments live inside each board folder. Each has a `Makefile`, a `README.md` (question, setup, results, observations) and a `results/` folder.
 
@@ -143,7 +110,7 @@ Models used:
 
 SRAM budgets: 512, 256, 128 and 0 KB. Placement plans for each budget were produced with a tiling/placement planner and converted with `tools/make_placement.py`; each tensor is placed wholly in one tier.
 
-## 8. Results so far
+## 7. Results so far
 
 Full page: [stm32h757i_eval/RESULTS.md](stm32h757i_eval/RESULTS.md).
 
@@ -179,7 +146,7 @@ Full page: [stm32h757i_eval/RESULTS.md](stm32h757i_eval/RESULTS.md).
 4. Models whose kernels re-read inputs many times (MiniResNet's 7×7/3×3 convolutions) are the most sensitive to an uncached slow tier.
 5. Explicit management is cheap: MPU changes are ~30 cycles, cache maintenance ~8 cycles per line, and DMA runs at ~98 % of the SDRAM bus peak. Staging data with DMA costs far less than running uncached from SDRAM.
 
-## 9. Methodology and measurement rules
+## 8. Methodology and measurement rules
 
 These rules hold for every experiment and every board:
 
@@ -195,7 +162,7 @@ These rules hold for every experiment and every board:
 
 Per-board details (clock tree, memory map, MPU regions, compiler flags) are in each board's `README.md`.
 
-## 10. Getting started
+## 9. Getting started
 
 **Requirements**
 - Python 3 with `numpy` and `tensorflow` (for model conversion and reference checks)
@@ -225,7 +192,7 @@ Disconnect the debugger, reset, and read the ST-LINK virtual COM port at 115200 
 
 STM32CubeIDE users can import `stm32h757i_eval/port` as a *Makefile Project with Existing Code*.
 
-## 11. Adding a board, model or experiment
+## 10. Adding a board, model or experiment
 
 **New board**
 1. `cp -r _template_board <board>`
@@ -246,7 +213,7 @@ Create `<board>/experiments/NN_<name>/` with a `Makefile` that calls `../../port
 
 Further reading: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers and the port contract).
 
-## 12. Limitations
+## 11. Limitations
 
 - Kernels are portable C (with SMLAD for 1×1 convolutions), not a vendor-optimised library, so absolute latencies are higher than CMSIS-NN would give. Comparisons within an experiment are like-for-like.
 - Weights stay in internal flash; only activations are placed across tiers so far.
@@ -255,7 +222,7 @@ Further reading: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers and the po
 - The current STM32H757 results were measured with per-configuration STM32CubeIDE projects that preceded this layout; the refactored code keeps the same kernels, harness logic, clock, memory and MPU settings.
 - Differences below ~0.1 % are within code-alignment effects and should be treated as noise.
 
-## 13. Roadmap
+## 12. Roadmap
 
 - More boards with different SRAM / external-memory ratios (other Cortex-M7/M55/M85, RISC-V, ESP32-S3 with PSRAM).
 - More external tiers: OctoSPI/HyperRAM, QSPI PSRAM, SD card.
