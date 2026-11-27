@@ -9,14 +9,15 @@
 2. [Research questions](#2-research-questions)
 3. [What the framework does](#3-what-the-framework-does)
 4. [How it works, step by step](#4-how-it-works-step-by-step)
-5. [Boards](#6-boards)
-6. [Experiments](#7-experiments)
-7. [Results so far](#8-results-so-far)
-8. [Methodology and measurement rules](#9-methodology-and-measurement-rules)
-9. [Getting started](#10-getting-started)
-10. [Adding a board, model or experiment](#11-adding-a-board-model-or-experiment)
-11. [Limitations](#12-limitations)
-12. [Roadmap](#13-roadmap)
+5. [Repository layout](#5-repository-layout)
+6. [Boards](#6-boards)
+7. [Experiments](#7-experiments)
+8. [Results so far](#8-results-so-far)
+9. [Methodology and measurement rules](#9-methodology-and-measurement-rules)
+10. [Getting started](#10-getting-started)
+11. [Adding a board, model or experiment](#11-adding-a-board-model-or-experiment)
+12. [Limitations](#12-limitations)
+13. [Roadmap](#13-roadmap)
 
 ---
 
@@ -83,23 +84,56 @@ What happens on the board when a placement-sweep binary starts:
 5. Warm-up runs, then N timed runs; each run's cycle count is stored.
 6. All cycle counts, min/mean/max and the output checksum are printed, followed by one CSV line.
 
-## 5. Boards
+## 5. Repository layout
+
+Each MCU gets **one self-contained parent folder** that holds everything needed to run the experiments on it: the shared engine and tools, the board port, the placements, the experiments and their results. A new MCU is added as a new parent folder next to `stm32h757i_eval/`.
+
+```
+mcu-memory-hierarchy-bench/                 (repo root)
+├── README.md                               this file
+├── LICENSE
+└── mcu-memory-hierarchy-bench/
+    └── stm32h757i_eval/                    ◄── parent folder for the STM32H757I-EVAL
+        ├── README.md                       board setup: clocks, memory map, MPU, flags
+        ├── RESULTS.md                      all results for this board on one page
+        ├── core/
+        │   ├── include/                    port.h (board contract), port_overheads.h, bench.h
+        │   ├── engine/                     int8 inference engine, bit-exact with TFLite
+        │   └── bench/                      studies: placement_sweep.c, overhead_bench.c, common.c
+        ├── models/                         generated tables + weights for each model
+        │   ├── mobilenetv2_a035_224_fft_int8/
+        │   └── miniresnetv2_s2_64x50_tl_int8/
+        ├── tools/                          tflite2c.py, placement.py, make_placement.py
+        ├── docs/                           ARCHITECTURE.md, PORTING.md, STUDIES.md, ROADMAP.md
+        ├── port/                           board code, Makefile, startup, linker script, CMSIS
+        ├── placements/<model>/s<KB>/       placement tables for each SRAM budget
+        ├── experiments/
+        │   ├── 01_placement_sweep_cached/      Makefile, README.md, results/
+        │   ├── 02_placement_sweep_noncached/   Makefile, README.md, results/
+        │   └── 03_overhead_bench/              Makefile, README.md, results/
+        ├── host/                           PC build for correctness checks (no timing claims)
+        └── _template_board/                port stubs + experiment template for a new MCU
+```
+
+In the rest of this README, paths such as `core/` or `experiments/` are relative to the board folder (`mcu-memory-hierarchy-bench/stm32h757i_eval/`).
+
+## 6. Boards
 
 | Board folder | Core | Fast memory | External tier | Status |
 |---|---|---|---|---|
-| [`stm32h757i_eval/`](stm32h757i_eval/) | Cortex-M7 @ 400 MHz | 512 KB AXI SRAM, 128 KB DTCM | 32 MB SDRAM (FMC, 32-bit, 100 MHz) | 3 experiments measured |
-| [`host/`](host/) | PC | — | emulated | correctness checks |
-| [`_template_board/`](_template_board/) | — | — | — | starting point |
+| [`stm32h757i_eval/`](mcu-memory-hierarchy-bench/stm32h757i_eval/) | Cortex-M7 @ 400 MHz | 512 KB AXI SRAM, 128 KB DTCM | 32 MB SDRAM (FMC, 32-bit, 100 MHz) | 3 experiments measured |
+| [`host/`](mcu-memory-hierarchy-bench/stm32h757i_eval/host/) | PC | — | emulated | correctness checks (inside each board folder) |
+| [`_template_board/`](mcu-memory-hierarchy-bench/stm32h757i_eval/_template_board/) | — | — | — | starting point for a new MCU |
 
-## 6. Experiments
+## 7. Experiments
 
-Experiments live inside each board folder. Each has a `Makefile`, a `README.md` (question, setup, results, observations) and a `results/` folder.
+Experiments live inside each board folder, under `experiments/`. Each has a `Makefile`, a `README.md` (question, setup, results, observations) and a `results/` folder.
 
 | Board | # | Experiment | Question |
 |---|---|---|---|
-| stm32h757i_eval | 01 | [Placement sweep, SDRAM cacheable](stm32h757i_eval/experiments/01_placement_sweep_cached/) | Q1 with the cache on |
-| stm32h757i_eval | 02 | [Placement sweep, SDRAM non-cacheable](stm32h757i_eval/experiments/02_placement_sweep_noncached/) | Q1 + Q2, raw external-memory cost |
-| stm32h757i_eval | 03 | [Memory-management overheads](stm32h757i_eval/experiments/03_overhead_bench/) | Q3 |
+| stm32h757i_eval | 01 | [Placement sweep, SDRAM cacheable](mcu-memory-hierarchy-bench/stm32h757i_eval/experiments/01_placement_sweep_cached/) | Q1 with the cache on |
+| stm32h757i_eval | 02 | [Placement sweep, SDRAM non-cacheable](mcu-memory-hierarchy-bench/stm32h757i_eval/experiments/02_placement_sweep_noncached/) | Q1 + Q2, raw external-memory cost |
+| stm32h757i_eval | 03 | [Memory-management overheads](mcu-memory-hierarchy-bench/stm32h757i_eval/experiments/03_overhead_bench/) | Q3 |
 
 Models used:
 
@@ -110,9 +144,9 @@ Models used:
 
 SRAM budgets: 512, 256, 128 and 0 KB. Placement plans for each budget were produced with a tiling/placement planner and converted with `tools/make_placement.py`; each tensor is placed wholly in one tier.
 
-## 7. Results so far
+## 8. Results so far
 
-Full page: [stm32h757i_eval/RESULTS.md](stm32h757i_eval/RESULTS.md).
+Full page: [RESULTS.md](mcu-memory-hierarchy-bench/stm32h757i_eval/RESULTS.md).
 
 **Max latency (ms), 500 timed runs per configuration, STM32H757 @ 400 MHz**
 
@@ -127,8 +161,8 @@ Full page: [stm32h757i_eval/RESULTS.md](stm32h757i_eval/RESULTS.md).
 \* nothing placed in SDRAM at this budget, so the cache setting cannot matter.
 
 <p>
-<img src="stm32h757i_eval/experiments/01_placement_sweep_cached/results/latency_vs_sram.png" width="49%">
-<img src="stm32h757i_eval/experiments/02_placement_sweep_noncached/results/latency_vs_sram.png" width="49%">
+<img src="mcu-memory-hierarchy-bench/stm32h757i_eval/experiments/01_placement_sweep_cached/results/latency_vs_sram.png" width="49%">
+<img src="mcu-memory-hierarchy-bench/stm32h757i_eval/experiments/02_placement_sweep_noncached/results/latency_vs_sram.png" width="49%">
 </p>
 
 **Memory-management overheads (1000 runs each)**
@@ -146,7 +180,7 @@ Full page: [stm32h757i_eval/RESULTS.md](stm32h757i_eval/RESULTS.md).
 4. Models whose kernels re-read inputs many times (MiniResNet's 7×7/3×3 convolutions) are the most sensitive to an uncached slow tier.
 5. Explicit management is cheap: MPU changes are ~30 cycles, cache maintenance ~8 cycles per line, and DMA runs at ~98 % of the SDRAM bus peak. Staging data with DMA costs far less than running uncached from SDRAM.
 
-## 8. Methodology and measurement rules
+## 9. Methodology and measurement rules
 
 These rules hold for every experiment and every board:
 
@@ -162,12 +196,17 @@ These rules hold for every experiment and every board:
 
 Per-board details (clock tree, memory map, MPU regions, compiler flags) are in each board's `README.md`.
 
-## 9. Getting started
+## 10. Getting started
 
 **Requirements**
 - Python 3 with `numpy` and `tensorflow` (for model conversion and reference checks)
 - `make` and a GCC toolchain for each target (`arm-none-eabi-gcc` for Cortex-M)
 - A flasher (STM32CubeProgrammer CLI, OpenOCD, or STM32CubeIDE) and a serial terminal
+
+**Go to the board folder**
+```
+cd mcu-memory-hierarchy-bench/stm32h757i_eval
+```
 
 **Check a model on your PC first**
 ```
@@ -178,7 +217,7 @@ The output must say `all layers match`.
 
 **Run an experiment on the STM32H757I-EVAL**
 ```
-cd stm32h757i_eval/experiments/01_placement_sweep_cached
+cd experiments/01_placement_sweep_cached
 make                                                     # all 8 configurations
 make one MODEL=mobilenetv2_a035_224_fft_int8 SRAM_KB=128 # one configuration
 ```
@@ -190,30 +229,38 @@ STM32_Programmer_CLI -c port=SWD -w build/placement_sweep/<model>/s<KB>/bench.el
 ```
 Disconnect the debugger, reset, and read the ST-LINK virtual COM port at 115200 8N1. Copy the `CSV,...` line into the experiment's `results/results.csv`.
 
-STM32CubeIDE users can import `stm32h757i_eval/port` as a *Makefile Project with Existing Code*.
+STM32CubeIDE users can import `mcu-memory-hierarchy-bench/stm32h757i_eval/port` as a *Makefile Project with Existing Code*.
 
-## 10. Adding a board, model or experiment
+## 11. Adding a board, model or experiment
 
-**New board**
-1. `cp -r _template_board <board>`
-2. Implement `<board>/port/port.c` (about a dozen small functions: clock, cycle counter, UART, external memory, MPU/cache setup, scratch memory) and, for overhead experiments, `port_overheads.c`.
-3. Add startup, linker script, device headers and a `Makefile` in `<board>/port/`.
-4. Generate placements into `<board>/placements/`.
-5. Copy experiment folders into `<board>/experiments/`, set `PORT`, build, run, and store results there.
-Details: [docs/PORTING.md](docs/PORTING.md).
+**New board (MCU)**
+1. Copy the H7 parent folder and drop its board-specific parts:
+   ```
+   cd mcu-memory-hierarchy-bench
+   cp -r stm32h757i_eval <new_board>
+   cd <new_board>
+   rm -rf port placements experiments/*/results/* RESULTS.md
+   cp -r _template_board/port port
+   cp -r _template_board/placements placements
+   ```
+2. Implement `port/port.c` (about a dozen small functions: clock, cycle counter, UART, external memory, MPU/cache setup, scratch memory) and, for overhead experiments, `port_overheads.c`.
+3. Add startup, linker script, device headers and a `Makefile` in `port/` (start from `port/Makefile.example`).
+4. Generate placements into `placements/`.
+5. Set `PORT` in each experiment Makefile, build, run, store results in `results/`, and write the board's `README.md` and `RESULTS.md`.
+Details: [docs/PORTING.md](mcu-memory-hierarchy-bench/stm32h757i_eval/docs/PORTING.md).
 
 **New model**
 ```
 python3 tools/tflite2c.py model.tflite models/<model>
-python3 tools/make_placement.py model.tflite plan.html <board>/placements/<model>/s<KB> models/<model>/nn_model.c
+python3 tools/make_placement.py model.tflite plan.html placements/<model>/s<KB> models/<model>/nn_model.c
 ```
 
 **New experiment**
-Create `<board>/experiments/NN_<name>/` with a `Makefile` that calls `../../port/Makefile` with the right options, a `README.md`, and a `results/` folder. If it needs a new kind of measurement, add a study in `core/bench/` — see [docs/STUDIES.md](docs/STUDIES.md).
+Create `experiments/NN_<name>/` with a `Makefile` that calls `../../port/Makefile` with the right options, a `README.md`, and a `results/` folder. If it needs a new kind of measurement, add a study in `core/bench/` — see [docs/STUDIES.md](mcu-memory-hierarchy-bench/stm32h757i_eval/docs/STUDIES.md).
 
-Further reading: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers and the port contract).
+Further reading: [docs/ARCHITECTURE.md](mcu-memory-hierarchy-bench/stm32h757i_eval/docs/ARCHITECTURE.md) (layers and the port contract).
 
-## 11. Limitations
+## 12. Limitations
 
 - Kernels are portable C (with SMLAD for 1×1 convolutions), not a vendor-optimised library, so absolute latencies are higher than CMSIS-NN would give. Comparisons within an experiment are like-for-like.
 - Weights stay in internal flash; only activations are placed across tiers so far.
@@ -222,7 +269,7 @@ Further reading: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers and the po
 - The current STM32H757 results were measured with per-configuration STM32CubeIDE projects that preceded this layout; the refactored code keeps the same kernels, harness logic, clock, memory and MPU settings.
 - Differences below ~0.1 % are within code-alignment effects and should be treated as noise.
 
-## 12. Roadmap
+## 13. Roadmap
 
 - More boards with different SRAM / external-memory ratios (other Cortex-M7/M55/M85, RISC-V, ESP32-S3 with PSRAM).
 - More external tiers: OctoSPI/HyperRAM, QSPI PSRAM, SD card.
@@ -231,4 +278,4 @@ Further reading: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers and the po
 - Weights in external memory.
 - Optimised kernel backends, per-layer timing, energy per inference.
 
-Details: [docs/ROADMAP.md](docs/ROADMAP.md).
+Details: [docs/ROADMAP.md](mcu-memory-hierarchy-bench/stm32h757i_eval/docs/ROADMAP.md).
