@@ -1,0 +1,6 @@
+config,board,model,sram_budget_kb,act_sram_kb,act_ext_kb,min_ms,mean_ms,max_ms,out_checksum
+stm32h757i_eval_mobilenetv2_a035_224_fft_int8_s512_nc,stm32h757i_eval,mobilenetv2_a035_224_fft_int8,512,392,735,1326.013,1326.132,1326.232,0x6E135E66
+stm32h757i_eval_mobilenetv2_a035_224_fft_int8_s256_nc,stm32h757i_eval,mobilenetv2_a035_224_fft_int8,256,196,686,1773.768,1773.988,1774.652,0x6E135E66
+stm32h757i_eval_mobilenetv2_a035_224_fft_int8_s128_nc,stm32h757i_eval,mobilenetv2_a035_224_fft_int8,128,98,882,1873.642,1873.980,1874.521,0x6E135E66
+stm32h757i_eval_mobilenetv2_a035_224_fft_int8_s0_nc,stm32h757i_eval,mobilenetv2_a035_224_fft_int8,0,0,882,2293.541,2294.239,2294.926,0x6E135E66
+stm32h757i_eval_miniresnetv2_s2_64x50_tl_int8_s0_nc,stm32h757i_eval,miniresnetv2_s2_64x50_tl_int8,0,0,110,1726.880,1726.928,1726.977,0x62FA5CE4
