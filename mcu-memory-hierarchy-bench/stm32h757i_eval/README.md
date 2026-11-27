@@ -1,5 +1,7 @@
 # stm32h757i_eval
 
+The experiments on this board are carried out in collaboration with **Dr. Vijaya Kumar S**, Indian Institute of Information Technology, Design and Manufacturing (IIITDM) Kancheepuram.
+
 Everything for this board lives in this folder:
 
 ```
